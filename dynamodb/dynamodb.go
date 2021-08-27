@@ -98,7 +98,7 @@ func IsConditionCheckFailure(err error) bool {
 			var tce *types.TransactionCanceledException
 			if errors.As(err, &tce) {
 				for _, reason := range tce.CancellationReasons {
-					if *reason.Code == "ConditionCheckFailed" {
+					if *reason.Code == "ConditionalCheckFailed" {
 						return true
 					}
 				}
