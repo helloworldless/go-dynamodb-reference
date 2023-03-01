@@ -1,6 +1,6 @@
 # DynamoDB Reference for Go
 
-A few example using the [AWS SDK for Go V2](https://aws.github.io/aws-sdk-go-v2/docs/).
+A few examples using the [AWS SDK for Go V2](https://aws.github.io/aws-sdk-go-v2/docs/).
 
 ## Steps to Run
 
