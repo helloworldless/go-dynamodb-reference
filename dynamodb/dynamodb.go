@@ -3,6 +3,7 @@ package dynamodb
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -14,12 +15,14 @@ import (
 	"strings"
 )
 
-func CreateLocalClient() *dynamodb.Client {
+// CreateLocalClient Creates a local DynamoDb Client on the specified port. Useful for connecting to DynamoDB Local or
+// LocalStack.
+func CreateLocalClient(port int) *dynamodb.Client {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("us-east-1"),
 		config.WithEndpointResolver(aws.EndpointResolverFunc(
 			func(service, region string) (aws.Endpoint, error) {
-				return aws.Endpoint{URL: "http://localhost:8000"}, nil
+				return aws.Endpoint{URL: fmt.Sprintf("http://localhost:%d", port)}, nil
 			})),
 		config.WithCredentialsProvider(credentials.StaticCredentialsProvider{
 			Value: aws.Credentials{
@@ -48,16 +51,16 @@ func tableExists(d *dynamodb.Client, name string) bool {
 	return false
 }
 
-func CreateTableIfNotExists(d *dynamodb.Client, tableName string) {
+// CreateTableIfNotExists If the table does not exist, creates it and returns true. Otherwise, does nothing and returns false.
+func CreateTableIfNotExists(d *dynamodb.Client, tableName string) bool {
 	if tableExists(d, tableName) {
-		log.Printf("table=%v already exists\n", tableName)
-		return
+		return false
 	}
 	_, err := d.CreateTable(context.TODO(), buildCreateTableInput(tableName))
 	if err != nil {
 		log.Fatal("CreateTable failed", err)
 	}
-	log.Printf("created table=%v\n", tableName)
+	return true
 }
 
 func buildCreateTableInput(tableName string) *dynamodb.CreateTableInput {
@@ -87,7 +90,9 @@ func buildCreateTableInput(tableName string) *dynamodb.CreateTableInput {
 	}
 }
 
-func IsConditionCheckFailure(err error) bool {
+// IsConditionalCheckFailure Returns true if the error is a ConditionalCheckFailedException, else returns false.
+// See https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Programming.Errors.html
+func IsConditionalCheckFailure(err error) bool {
 	if strings.Contains(err.Error(), "ConditionalCheckFailedException") {
 		return true
 	}
@@ -109,8 +114,8 @@ func IsConditionCheckFailure(err error) bool {
 	return false
 }
 
+// DeleteAllItems Deletes all the items in the table
 func DeleteAllItems(d *dynamodb.Client, tableName string) error {
-	log.Printf("deleting all items from table=%v\n", tableName)
 	var offset map[string]types.AttributeValue
 	for {
 		scanInput := &dynamodb.ScanInput{
